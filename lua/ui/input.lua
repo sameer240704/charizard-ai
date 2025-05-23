@@ -23,17 +23,22 @@ end
 
 function M.create_window()
 	if M.win and api.nvim_win_is_valid(M.win) then
+		api.nvim_set_current_win(M.win)
 		return
 	end
 
 	local config = require("ai-assist.core.config").ui
 	local width = math.floor(vim.o.columns * config.width)
 
-	-- Create input buffer
-	M.buf = api.nvim_create_buf(false, true)
-	api.nvim_buf_set_name(M.buf, "AI Assist Input")
-	api.nvim_set_option_value("buftype", "prompt", { buf = M.buf })
-	api.nvim_set_option_value("filetype", "ai_assist_input", { buf = M.buf })
+	-- Create new buffer if none exists or if existing is invalid
+	if not M.buf or not api.nvim_buf_is_valid(M.buf) then
+		M.buf = api.nvim_create_buf(false, true)
+		api.nvim_set_option_value("filetype", "ai_assist_input", { buf = M.buf })
+		api.nvim_set_option_value("buftype", "prompt", { buf = M.buf })
+	else
+		-- Clear existing buffer instead of creating new one
+		api.nvim_buf_set_lines(M.buf, 0, -1, false, { "" })
+	end
 
 	-- Create input window
 	M.win = api.nvim_open_win(M.buf, true, {
@@ -57,10 +62,9 @@ function M.create_window()
 		end
 	end)
 
-
-    -- Focus on Input
-    api.nvim_set_current_win(M.win)
-    vim.cmd("startinsert!")
+	-- Focus on Input
+	api.nvim_set_current_win(M.win)
+	vim.cmd("startinsert!")
 
 	-- Apply theme
 	require("ai-assist.ui.theme").apply_theme(M.win, M.buf)
