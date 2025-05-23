@@ -106,6 +106,11 @@ function M.process_query(prompt)
 		-- Format and display response
 		local response_lines = utils.format_response(response, config.ui.response_prefix)
 
+		-- Formatting the response lines properly
+		for line in response:gmatch("[^\n]+") do
+			table.insert(response_lines, line)
+		end
+
 		-- Replace "Processing..." line
 		local buf_lines = vim.api.nvim_buf_get_lines(window.buf, 0, -1, false)
 		for i, line in ipairs(buf_lines) do
@@ -152,15 +157,26 @@ end
 
 -- Toggle main window
 function M.toggle()
+	-- Close if open
 	if window.win and vim.api.nvim_win_is_valid(window.win) then
 		window.close()
 		if input.win and vim.api.nvim_win_is_valid(input.win) then
 			input.close()
 		end
-	else
-		window.create_window()
-		input.create_window()
+		return
 	end
+
+	-- Open new session
+	window.create_window()
+	input.create_window()
+
+	-- Ensure focus on input
+	vim.schedule(function()
+		if input.win and vim.api.nvim_win_is_valid(input.win) then
+			vim.api.nvim_set_current_win(input.win)
+			vim.cmd("startinsert!")
+		end
+	end)
 end
 
 -- Add context from current buffer

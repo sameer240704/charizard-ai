@@ -32,8 +32,8 @@ function M.create_window()
 	-- Create input buffer
 	M.buf = api.nvim_create_buf(false, true)
 	api.nvim_buf_set_name(M.buf, "AI Assist Input")
-	api.nvim_buf_set_option(M.buf, "filetype", "ai_assist_input")
-	api.nvim_buf_set_option(M.buf, "buftype", "prompt")
+	api.nvim_set_option_value("buftype", "prompt", { buf = M.buf })
+	api.nvim_set_option_value("filetype", "ai_assist_input", { buf = M.buf })
 
 	-- Create input window
 	M.win = api.nvim_open_win(M.buf, true, {
@@ -51,8 +51,16 @@ function M.create_window()
 	-- Setup prompt
 	fn.prompt_setprompt(M.buf, config.prompt_prefix)
 	fn.prompt_setcallback(M.buf, function(text)
-		require("ai-assist").process_query(text)
+		if text and text ~= "" then
+			require("ai-assist").process_query(text)
+			api.nvim_buf_set_lines(M.buf, 0, -1, false, { config.prompt_prefix })
+		end
 	end)
+
+
+    -- Focus on Input
+    api.nvim_set_current_win(M.win)
+    vim.cmd("startinsert!")
 
 	-- Apply theme
 	require("ai-assist.ui.theme").apply_theme(M.win, M.buf)

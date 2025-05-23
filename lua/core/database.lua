@@ -8,9 +8,7 @@ function M.setup()
 		error("MongoDB Driver required. Install with: luarocks install mongorover")
         return false
 	end
-	local ok, client = mongo.Client(
-		"mongodb+srv://charizard:charizardai@cluster0.xccypyn.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-	)
+	local ok, client = mongo.Client(vim.env.MONGO_URI)
     if not ok or not client then
         vim.notify("Failed to connect to MongoDB. Using in-memory storage.", vim.log.levels.WARN)
         return false

@@ -22,7 +22,9 @@ function M.setup()
 end
 
 function M.create_window()
+	-- Check for the validation of the current existing window
 	if M.win and api.nvim_win_is_valid(M.win) then
+		api.nvim_set_current_win(M.win)
 		return
 	end
 
@@ -30,12 +32,17 @@ function M.create_window()
 	local width = math.floor(vim.o.columns * config.width)
 	local col = config.position == "right" and (vim.o.columns - width) or 0
 
-	-- Create main buffer
-	M.buf = api.nvim_create_buf(false, true)
-	api.nvim_buf_set_name(M.buf, "AI Assist")
-	api.nvim_set_option_value("filetype", "ai_assist", { buf = M.buf })
-	api.nvim_set_option_value("buftype", "nofile", { buf = M.buf })
-	api.nvim_set_option_value("modifiable", true, { buf = M.buf })
+	-- Reuse existing buffer if it exists and is still valid
+	if M.buf and api.nvim_buf_is_valid(M.buf) then
+		api.nvim_buf_set_lines(M.buf, 0, -1, false, {})
+	else
+		-- Create main buffer
+		M.buf = api.nvim_create_buf(false, true)
+		api.nvim_buf_set_name(M.buf, "AI Assist")
+		api.nvim_set_option_value("filetype", "ai_assist", { buf = M.buf })
+		api.nvim_set_option_value("buftype", "nofile", { buf = M.buf })
+		api.nvim_set_option_value("modifiable", true, { buf = M.buf })
+	end
 
 	-- Create main window
 	M.win = api.nvim_open_win(M.buf, true, {
@@ -61,30 +68,30 @@ function M.create_window()
 end
 
 function M.append_lines(lines)
-    if not M.buf or not api.nvim_buf_is_valid(M.buf) then
-        return
-    end
+	if not M.buf or not api.nvim_buf_is_valid(M.buf) then
+		return
+	end
 
-    -- Convert lines to a flat list if they contain nested tables
-    local flat_lines = {}
-    for _, line in ipairs(lines) do
-        if type(line) == "string" then
-            -- Split strings with newlines into multiple lines
-            for sub_line in line:gmatch("[^\n]+") do
-                table.insert(flat_lines, sub_line)
-            end
-        else
-            table.insert(flat_lines, tostring(line))
-        end
-    end
+	-- Convert lines to a flat list if they contain nested tables
+	local flat_lines = {}
+	for _, line in ipairs(lines) do
+		if type(line) == "string" then
+			-- Split strings with newlines into multiple lines
+			for sub_line in line:gmatch("[^\n]+") do
+				table.insert(flat_lines, sub_line)
+			end
+		else
+			table.insert(flat_lines, tostring(line))
+		end
+	end
 
-    local current = api.nvim_buf_get_lines(M.buf, 0, -1, false)
-    api.nvim_buf_set_lines(M.buf, #current, #current, false, flat_lines)
+	local current = api.nvim_buf_get_lines(M.buf, 0, -1, false)
+	api.nvim_buf_set_lines(M.buf, #current, #current, false, flat_lines)
 
-    -- Auto-scroll if enabled
-    if require("ai-assist.core.config").ui.auto_scroll then
-        api.nvim_win_set_cursor(M.win, { api.nvim_buf_line_count(M.buf), 0 })
-    end
+	-- Auto-scroll if enabled
+	if require("ai-assist.core.config").ui.auto_scroll then
+		api.nvim_win_set_cursor(M.win, { api.nvim_buf_line_count(M.buf), 0 })
+	end
 end
 
 function M.clear()
@@ -98,8 +105,10 @@ function M.close()
 		api.nvim_win_close(M.win, true)
 		M.win = nil
 	end
+
+	-- EDIT: Not deleting the buffer here. Just clearing it
 	if M.buf and api.nvim_buf_is_valid(M.buf) then
-		api.nvim_buf_delete(M.buf, { force = true })
+		api.nvim_buf_set_lines(M.buf, 0, -1, false, {})
 		M.buf = nil
 	end
 end
